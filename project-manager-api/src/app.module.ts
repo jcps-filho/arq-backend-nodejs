@@ -4,10 +4,10 @@ import { AppService } from './app.service';
 import { ProjectsModule } from './projects/projects.module';
 import { UsersModule } from './users/users.module';
 import { TasksModule } from './tasks/tasks.module';
-import { TypeormModule } from './modules/config/typeorm/typeorm.module';
+import { TypeOrmConfig } from './modules/config/typeorm/typeorm.module';
 
 @Module({
-  imports: [ProjectsModule, UsersModule, TasksModule, TypeormModule],
+  imports: [ProjectsModule, UsersModule, TasksModule, TypeOrmConfig],
   controllers: [AppController],
   providers: [AppService],
 })
