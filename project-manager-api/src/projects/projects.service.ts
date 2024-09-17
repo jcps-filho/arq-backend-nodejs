@@ -1,4 +1,4 @@
-import { Injectable, Query } from "@nestjs/common";
+import { Injectable, NotFoundException, Query } from "@nestjs/common";
 import { CreateProjectDto } from "./dto/create-project.dto";
 import { UpdateProjectDto } from "./dto/update-project.dto";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -6,47 +6,70 @@ import { Project } from "./entities/projects.entity";
 import { Repository } from "typeorm";
 import { PageService } from "src/modules/pagination/page/page.service";
 import { DEFAULT_PAGE_SIZE, FilterDto } from "src/modules/pagination/dto/filter.dto";
+import { UsersService } from "src/users/users.service";
 
 
 @Injectable()
 export class ProjectsService {
-    projectsService: any;
     constructor(
         @InjectRepository(Project)
         private readonly projectRepository: Repository<Project>,
         private readonly pageService: PageService,
+        private readonly usersService: UsersService,
     ) { }
-
-    create(createProjectDto: CreateProjectDto) {
-        return this.projectRepository.save(createProjectDto);
+    
+    async create(userEmail: string, createProjectDto: CreateProjectDto) {
+        const user = await this.usersService.findOneByOrFail({
+            email: userEmail,
+        });
+        return this.projectRepository.save({
+            ...createProjectDto,
+            user,
+        });
     }
 
-    findAll() {
-        return this.projectRepository.find();
+    async findAll(userEmail: string) {
+        const user = await this.usersService.findOneBy({ email: userEmail });
+        return this.projectRepository.find({ where: { user } });
     }
 
-    findOne(id: number) {
+    async findAllPaginated(userEmail: string, filter?: FilterDto) {
+        if (!filter) {
+            return this.findAll(userEmail);
+        }
+        const user = await this.usersService.findOneBy({ email: userEmail });
+        return this.pageService.paginate(
+            this.projectRepository,
+            {
+                page: filter.page,
+                pageSize: DEFAULT_PAGE_SIZE,
+            },
+            { user },
+        );
+    }
+
+    async findOne(userEmail: string, id: number) {
+        const user = await this.usersService.findOneBy({ email: userEmail });
         return this.projectRepository.findOne({
-            where: { id },
+            where: { id, user },
             relations: { tasks: true },
         });
     }
 
-    findAllPaginated(filter?: FilterDto) {
-        if (!filter) {
-            return this.findAll();
+    async update(
+        userEmail: string,
+        id: number,
+        updateProjectDto: UpdateProjectDto,
+    ) {
+        const user = await this.usersService.findOneBy({ email: userEmail });
+        const project = this.findOne(user.email, id);
+        if (!project) {
+            throw new NotFoundException();
         }
-        return this.pageService.paginate(this.projectRepository, {
-            page: filter.page,
-            pageSize: DEFAULT_PAGE_SIZE,
-        });
-    }
-
-    update(id: number, updateProjectDto: UpdateProjectDto) {
         return this.projectRepository.update(id, updateProjectDto);
     }
 
     async remove(id: number) {
-        await this.projectRepository.delete(id);
+        await this.projectRepository.softDelete(id);
     }
 }

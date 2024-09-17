@@ -1,5 +1,6 @@
 import { Project } from 'src/projects/entities/projects.entity';
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { User } from 'src/users/entities/user.entity';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 export enum TaskStatus {
   pending = 'pending',
@@ -23,4 +24,8 @@ export class Task {
   })
 
   project: Project;
+
+  @ManyToOne(() => User, (user) => user.tasks)
+  @JoinColumn()
+  user: User;
 }

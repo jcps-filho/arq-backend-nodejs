@@ -7,43 +7,55 @@ import {
     Param,
     Delete,
     Query,
-    UseInterceptors,
+    Inject,
+    Req,
 } from "@nestjs/common";
 import { ProjectsService } from "./projects.service";
 import { CreateProjectDto } from "./dto/create-project.dto";
 import { UpdateProjectDto } from "./dto/update-project.dto";
 import { FilterDto } from "src/modules/pagination/dto/filter.dto";
-import { CacheInterceptor, CacheTTL } from "@nestjs/cache-manager";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Cache } from "cache-manager";
 
 @Controller('projects')
 export class ProjectsController {
-    constructor(private readonly projectsService: ProjectsService) { }
-
+    constructor(
+        private readonly projectsService: ProjectsService,
+        @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    ) { }
+    
     @Post()
-    create(
-        @Body() createProjectDto: CreateProjectDto,
-    ) {
-        return this.projectsService.create(createProjectDto);
+    create(@Req() request, @Body() createProjectDto: CreateProjectDto) {
+        return this.projectsService.create(
+            request.user?.username,
+            createProjectDto,
+        );
     }
 
     @Get()
-    @UseInterceptors(CacheInterceptor)
-    @CacheTTL(30000)
-    async findAll(@Query() filter?: FilterDto) {
-        return this.projectsService.findAllPaginated(filter)
+    async findAll(@Req() request, @Query() filter?: FilterDto) {
+        return this.projectsService.findAllPaginated(
+            request.user?.username,
+            filter,
+        );
     }
 
     @Get(":id")
-    findOne(@Param("id") id: string) {
-        return this.projectsService.findOne(+id);
+    findOne(@Req() request, @Param("id") id: string) {
+        return this.projectsService.findOne(request.user?.username, +id);
     }
 
     @Patch(":id")
     update(
+        @Req() request,
         @Param("id") id: string,
         @Body() updateProjectDto: UpdateProjectDto,
     ) {
-        return this.projectsService.update(+id, updateProjectDto);
+        return this.projectsService.update(
+            request.user?.username,
+            +id,
+            updateProjectDto,
+        );
     }
 
     @Delete(":id")
